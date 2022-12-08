@@ -1,0 +1,79 @@
+```{r}
+require(jsonlite)
+require(stringi)
+require(stringr)
+require(data.table)
+```
+
+```{r}
+housing <- fromJSON(file.choose()) 
+```
+
+```{r}
+### deal with date string
+
+#housing$date <- str_remove_all(housing$date, c("[st]","[nd]", "[th]", "[rd]", "[h]"))
+housing$date <- gsub('st','',housing$date)
+housing$date <- gsub('nd','',housing$date)
+housing$date <- gsub('th','',housing$date)
+housing$date <- gsub('rd','',housing$date)
+
+housing$date <- gsub('Sep','09',housing$date)
+housing$date <- gsub('Aug','08',housing$date)
+
+housing$date <- as.Date(housing$date,"%d %m %Y")
+housing$date <- format(housing$date,"%d/%m/%Y")
+```
+
+```{r}
+### deal with null value and delete row with 0 
+housing2 <- housing
+housing <- housing[, -9]
+
+housing[is.na(housing)] <- 0
+housing$sq. <- housing2$sq.
+housing <- housing[, c(1:8, 13, 9:12)]
+
+housing <- housing[housing$price != 0, ]   
+```
+
+```{r}
+### aggregate facilities 
+
+housing[, c(7:8,10:13)] <- sapply(housing[, c(7:8,10:13)], as.integer)
+
+housing$TotalBeds <- housing$beds + housing$bed
+housing$TotalBaths <- housing$baths + housing$bath
+housing$TotalReceptions <- housing$reception + housing$receptions
+
+housing <- housing[, -(c(7:8,10:13))]
+```
+
+```{r}
+### Extract Property type from “types” column
+
+housing$FlatType <- housing$types
+
+housing$FlatType <-gsub('for sale', '', housing$FlatType)
+housing$FlatType <-gsub('bed', '', housing$FlatType)
+housing$FlatType <-gsub('[0-9]', '', housing$FlatType)
+housing$FlatType <-gsub(' ', '', housing$FlatType)
+
+### change uppercase to lowercase
+housing$FlatType <- tolower(housing$FlatType)
+
+### add space between words
+housing$FlatType <- gsub("([a-z])(house)", "\\1 \\2", housing$FlatType)
+housing$FlatType <- gsub("([a-z])(bungalow)", "\\1 \\2
+                         ", housing$FlatType)
+housing$FlatType <- gsub("([a-z])(accommodation)", "\\1 \\2", housing$FlatType)
+housing$FlatType <- gsub("([a-z])(of)([a-z])", "\\1 \\2 \\3", housing$FlatType)
+
+```
+
+```{r}
+### export data to csv
+
+write.csv(housing, "C:\\Users\\siuhi\\OneDrive - Vocational Training Council - Student\\schoolwork\\IT 4887\\group project\\Project_Housing.csv", row.names = FALSE)
+```
+
